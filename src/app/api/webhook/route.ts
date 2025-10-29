@@ -1,95 +1,29 @@
-import { NextResponse } from "next/server";
-import Stripe from "stripe";
-import { writeClient } from "@/lib/writeClient";
-
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-
-export async function POST(req: Request) {
-  const sig = req.headers.get("stripe-signature")!;
-  const rawBody = await req.text();
-    
-
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
-  } catch (err) {
-    console.error(" Webhook signature verification failed:", err);
-    return new NextResponse("Webhook error", { status: 400 });
-  }
-console.log("Webhook triggered");
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    console.log("metadataaaaaa", session.metadata)
-    const metadata = session.metadata ?? {};
-
-
-    const userId = metadata.userId ?? "";
-    let cart = [];
-
-    try {
-      cart = metadata.cart ? JSON.parse(metadata.cart) : [];
-    } catch (e) {
-      console.error(" Failed to parse cart from metadata:", metadata.cart);
-      console.error("Webhook error:", e);
-      cart = [];
-    }
-
-    try {
-      await writeClient.create({
-        _type: "order",
-        userId,
-        cart,
-        total: session.amount_total! / 100,
-        createdAt: new Date().toISOString(),
-        paymentIntent: session.payment_intent?.toString() ?? "",
-        deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), //
-      });
-
-      console.log(" Order saved to Sanity for user:", userId);
-      return new NextResponse("Success", { status: 200 });
-    } catch (err) {
-      console.error(" Sanity push failed:", err);
-      return new NextResponse("Sanity error", { status: 500 });
-    }
-  }
-
-  return new NextResponse("Event received", { status: 200 });
-}
-export const config = {
-  api: {
-    bodyParser: false, 
-  },
-};
-
-//  Don't import a pre-initialized client like this:
-// import { writeClient } from "@/lib/writeClient"; 
-
-//  Instead import the factory and create the client at runtime:
-// import Stripe from "stripe";
 // import { NextResponse } from "next/server";
+// import Stripe from "stripe";
+// import { writeClient } from "@/lib/writeClient";
+
 
 // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 // const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-// export const runtime = 'nodejs'; // Use Node runtime
-
 // export async function POST(req: Request) {
 //   const sig = req.headers.get("stripe-signature")!;
 //   const rawBody = await req.text();
+    
 
 //   let event: Stripe.Event;
 //   try {
 //     event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
 //   } catch (err) {
-//     console.error("Webhook signature verification failed:", err);
+//     console.error(" Webhook signature verification failed:", err);
 //     return new NextResponse("Webhook error", { status: 400 });
 //   }
-
+// console.log("Webhook triggered");
 //   if (event.type === "checkout.session.completed") {
 //     const session = event.data.object as Stripe.Checkout.Session;
+//     console.log("metadataaaaaa", session.metadata)
 //     const metadata = session.metadata ?? {};
+
 
 //     const userId = metadata.userId ?? "";
 //     let cart = [];
@@ -97,19 +31,10 @@ export const config = {
 //     try {
 //       cart = metadata.cart ? JSON.parse(metadata.cart) : [];
 //     } catch (e) {
-//       console.error("Failed to parse cart from metadata:", metadata.cart);
-//       console.log(e)
+//       console.error(" Failed to parse cart from metadata:", metadata.cart);
+//       console.error("Webhook error:", e);
+//       cart = [];
 //     }
-
-//     // ✅ Dynamically import and initialize Sanity client here
-//     const { createClient } = await import('@sanity/client');
-//     const writeClient = createClient({
-//       projectId: 'srkj07q7',
-//       dataset: 'production',
-//       apiVersion: '2023-05-03',
-//       token: process.env.SANITY_WRITE_TOKEN,
-//       useCdn: false,
-//     });
 
 //     try {
 //       await writeClient.create({
@@ -119,22 +44,234 @@ export const config = {
 //         total: session.amount_total! / 100,
 //         createdAt: new Date().toISOString(),
 //         paymentIntent: session.payment_intent?.toString() ?? "",
-//         deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+//         deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), //
 //       });
 
-//       console.log("Order saved to Sanity for user:", userId);
+//       console.log(" Order saved to Sanity for user:", userId);
 //       return new NextResponse("Success", { status: 200 });
 //     } catch (err) {
-//       console.error("Sanity push failed:", err);
+//       console.error(" Sanity push failed:", err);
 //       return new NextResponse("Sanity error", { status: 500 });
 //     }
 //   }
 
 //   return new NextResponse("Event received", { status: 200 });
 // }
-
 // export const config = {
 //   api: {
-//     bodyParser: false,
+//     bodyParser: false, 
 //   },
 // };
+
+// //  Don't import a pre-initialized client like this:
+// // import { writeClient } from "@/lib/writeClient"; 
+
+// //  Instead import the factory and create the client at runtime:
+// // import Stripe from "stripe";
+// // import { NextResponse } from "next/server";
+
+// // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// // const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+// // export const runtime = 'nodejs'; // Use Node runtime
+
+// // export async function POST(req: Request) {
+// //   const sig = req.headers.get("stripe-signature")!;
+// //   const rawBody = await req.text();
+
+// //   let event: Stripe.Event;
+// //   try {
+// //     event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
+// //   } catch (err) {
+// //     console.error("Webhook signature verification failed:", err);
+// //     return new NextResponse("Webhook error", { status: 400 });
+// //   }
+
+// //   if (event.type === "checkout.session.completed") {
+// //     const session = event.data.object as Stripe.Checkout.Session;
+// //     const metadata = session.metadata ?? {};
+
+// //     const userId = metadata.userId ?? "";
+// //     let cart = [];
+
+// //     try {
+// //       cart = metadata.cart ? JSON.parse(metadata.cart) : [];
+// //     } catch (e) {
+// //       console.error("Failed to parse cart from metadata:", metadata.cart);
+// //       console.log(e)
+// //     }
+
+// //     // ✅ Dynamically import and initialize Sanity client here
+// //     const { createClient } = await import('@sanity/client');
+// //     const writeClient = createClient({
+// //       projectId: 'srkj07q7',
+// //       dataset: 'production',
+// //       apiVersion: '2023-05-03',
+// //       token: process.env.SANITY_WRITE_TOKEN,
+// //       useCdn: false,
+// //     });
+
+// //     try {
+// //       await writeClient.create({
+// //         _type: "order",
+// //         userId,
+// //         cart,
+// //         total: session.amount_total! / 100,
+// //         createdAt: new Date().toISOString(),
+// //         paymentIntent: session.payment_intent?.toString() ?? "",
+// //         deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+// //       });
+
+// //       console.log("Order saved to Sanity for user:", userId);
+// //       return new NextResponse("Success", { status: 200 });
+// //     } catch (err) {
+// //       console.error("Sanity push failed:", err);
+// //       return new NextResponse("Sanity error", { status: 500 });
+// //     }
+// //   }
+
+// //   return new NextResponse("Event received", { status: 200 });
+// // }
+
+// // export const config = {
+// //   api: {
+// //     bodyParser: false,
+// //   },
+// // };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import { NextResponse } from "next/server";
+// import Stripe from "stripe";
+
+// const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+
+// export async function POST(req: Request) {
+//   try {
+//     const body = await req.json();
+//     const { userId, items } = body;
+    
+
+
+//     // Validate user ID
+//     if (!userId) {
+//       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+//     }
+
+//     // Validate cart items
+//     if (!items || !Array.isArray(items) || items.length === 0) {
+//       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+//     }
+
+//     // Create Stripe Checkout Session
+//     const session = await stripe.checkout.sessions.create({
+//       payment_method_types: ["card"],
+//       mode: "payment",
+//       line_items: items.map((item: any) => ({
+//         price_data: {
+//           currency: "pkr", 
+//           product_data: {
+//             name: item.name,
+           
+//           },
+//           unit_amount: Math.round(item.price * 100), 
+//         },
+//         quantity: item.quantity,
+//       })),
+//       success_url: ${req.headers.get("origin")}/order-history?success=true,
+//       cancel_url: ${req.headers.get("origin")}/cart,
+//       metadata: {
+//         userId: String(userId),
+//         cart: JSON.stringify(
+//           items.map((item: any) => ({
+//             name: item.name,
+//             price: item.price,
+//             quantity: item.quantity,
+            
+//           }))
+//         ),
+//       },
+//     });
+
+//     // Redirect to Stripe Checkout
+//     return NextResponse.json({ url: session.url });
+//   } catch (err: any) {
+//     console.error("Stripe checkout error:", err.message || err);
+//     return NextResponse.json(
+//       { error: "Stripe checkout session failed" },
+//       { status: 500 }
+//     );
+//   }
+// }
+import { NextResponse } from "next/server";
+// import Stripe from "stripe";
+
+// const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { userId, items } = body;
+
+    // Validate user ID
+    if (!userId) {
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    }
+
+    // Validate cart items
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+    }
+
+    // Create Stripe Checkout Session
+    // const session = await stripe.checkout.sessions.create({
+    //   payment_method_types: ["card"],
+    //   mode: "payment",
+    //   line_items: items.map((item: unknown) => {
+    //     const { name, price, quantity } = item as { name: string; price: number; quantity: number };
+    //     return {
+    //       price_data: {
+    //         currency: "pkr",
+    //         product_data: {
+    //           name,
+    //         },
+    //         unit_amount: Math.round(price * 100),
+    //       },
+    //       quantity,
+    //     };
+    //   }),
+    //   success_url: ${req.headers.get("origin")}/order-history?success=true,
+    //   cancel_url: ${req.headers.get("origin")}/cart,
+    //   metadata: {
+    //     userId: String(userId),
+    //     cart: JSON.stringify(
+    //       items.map((item: unknown) => {
+    //         const { name, price, quantity } = item as { name: string; price: number; quantity: number };
+    //         return { name, price, quantity };
+    //       })
+    //     ),
+    //   },
+    // });
+
+    // Redirect to Stripe Checkout
+    return NextResponse.json({ message: "Payment done" });
+  } catch (err: unknown) {
+    const error = err as { message?: string };
+    console.error("Stripe checkout error:", error.message || err);
+    return NextResponse.json(
+      { error: "Stripe checkout session failed" },
+      { status: 500 }
+    );
+  }
+}
